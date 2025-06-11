@@ -28,6 +28,8 @@ app.get("/busy-dates", async (req, res) => {
     });
 
     const busyDates = result.data.calendars[process.env.CALENDAR_ID].busy;
+    console.log("busyDates" + [process.env.CALENDAR_ID]);
+    console.log()
     res.json(busyDates);
   } catch (error) {
     console.error("Error fetching busy dates:", error);
