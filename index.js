@@ -1,6 +1,7 @@
 // index.js
 const express = require("express");
 const cors = require("cors");
+const axios = require('axios');
 const { google } = require("googleapis");
 require("dotenv").config();
 
@@ -32,6 +33,29 @@ app.get("/busy-dates", async (req, res) => {
   } catch (error) {
     console.error("Error fetching busy dates:", error);
     res.status(500).send("Failed to fetch busy dates");
+  }
+});
+
+app.get('/reviews', async (req, res) => {
+  try {
+    const response = await axios.get(
+      `https://api.airtable.com/v0/${process.env.AIRTABLE_BASE_ID}/${process.env.AIRTABLE_TABLE_NAME}`,
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.AIRTABLE_TOKEN}`,
+        },
+      }
+    );
+
+    const formatted = response.data.records.map(record => ({
+      name: record.fields.Name,
+      review: record.fields.Review,
+    }));
+
+    res.json(formatted);
+  } catch (error) {
+    console.error('Error fetching from Airtable:', error);
+    res.status(500).json({ error: 'Failed to fetch reviews' });
   }
 });
 
