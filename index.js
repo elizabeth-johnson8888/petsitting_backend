@@ -7,6 +7,7 @@ require("dotenv").config();
 
 const app = express();
 app.use(cors());
+app.use(express.json());
 
 const PORT = process.env.PORT || 8080;
 
@@ -56,6 +57,62 @@ app.get('/reviews', async (req, res) => {
   } catch (error) {
     console.error('Error fetching from Airtable:', error);
     res.status(500).json({ error: 'Failed to fetch reviews' });
+  }
+});
+
+app.post("/submit-review", async (req, res) => {
+  const { code, name, review } = req.body;
+
+  try {
+    // 1. Validate the code
+    const codeRes = await axios.get(
+      `https://api.airtable.com/v0/${process.env.CODE_BASE_ID}/${process.env.CODE_TABLE_NAME}`,
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.CODE_API_TOKEN}`,
+        },
+      }
+    );
+
+    const match = codeRes.data.records.find(
+      (r) => r.fields.Code?.trim() === code.trim()
+    );
+
+    if (!match) {
+      return res.status(400).json({ success: false, message: "Invalid code" });
+    }
+
+    // 2. Delete the used code
+    await axios.delete(
+      `https://api.airtable.com/v0/${process.env.CODE_BASE_ID}/${process.env.CODE_TABLE_NAME}/${match.id}`,
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.CODE_API_TOKEN}`,
+        },
+      }
+    );
+
+    // 3. Submit the review
+    await axios.post(
+      `https://api.airtable.com/v0/${process.env.REVIEW_BASE_ID}/${process.env.REVIEW_TABLE_NAME}`,
+      {
+        fields: {
+          Name: name,
+          Review: review,
+        },
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.REVIEW_API_TOKEN}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Error submitting review:", err);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 });
 
