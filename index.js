@@ -82,7 +82,7 @@ app.get("/busy-dates", async (req, res) => {
       }
     }
 
-    res.json(busyDates);
+    res.json(unavailableDatesDates);
   } catch (error) {
     console.error("Error fetching busy dates:", error);
     res.status(500).send("Failed to fetch busy dates");
