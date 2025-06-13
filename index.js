@@ -35,41 +35,8 @@ app.get("/busy-dates", async (req, res) => {
     });
 
     const events = response.data.items;
-
-    // Group events by date
-    const grouped = {
-      allDay: {},
-      timed: {}
-    };
-    // let allDay = []
-
-    events.forEach(event => {
-      let dateKey;
-      let isAllDay = false;
-
-      if (event.start.dateTime) {
-        dateKey = new Date(event.start.dateTime).toDateString();
-        grouped.timed[dateKey] = (grouped.timed[dateKey] || 0) + 1;
-      } else if (event.start.date) {
-        dateKey = new Date(event.start.date).toDateString();
-        grouped.allDay[dateKey] = true;
-      } else {
-        return; // skip invalid event
-      }
-    });
-
-    const unavailableDates = [];
-
-    for (const dateKey in grouped.timed) {
-      const timedCount = grouped.timed[dateKey] || 0;
-      const hasAllDay = grouped.allDay[dateKey] === true;
-
-      if (timedCount >= 4 && hasAllDay) {
-        unavailableDates.push(dateKey);
-      }
-    }
    
-    res.json({unavailableDates});
+    res.json({events});
   } catch (error) {
     console.error("Error fetching busy dates:", error);
     res.status(500).send("Failed to fetch busy dates");
