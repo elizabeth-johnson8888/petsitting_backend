@@ -35,10 +35,13 @@ app.get("/busy-dates", async (req, res) => {
     });
 
     const events = response.data.items;
-    console.log(events)
 
     // Group events by date
-    const grouped = {};
+    const grouped = {
+      allDay: {},
+      timed: {}
+    };
+    // let allDay = []
 
     events.forEach(event => {
       let dateKey;
@@ -46,44 +49,27 @@ app.get("/busy-dates", async (req, res) => {
 
       if (event.start.dateTime) {
         dateKey = new Date(event.start.dateTime).toDateString();
+        grouped.timed[dateKey] = (grouped.timed[dateKey] || 0) + 1;
       } else if (event.start.date) {
         dateKey = new Date(event.start.date).toDateString();
-        isAllDay = true;
+        grouped.allDay[dateKey] = true;
       } else {
         return; // skip invalid event
       }
-
-      if (!grouped[dateKey]) {
-        grouped[dateKey] = {
-          timed: [],
-          allDay: [],
-        };
-      }
-
-      if (isAllDay) {
-        grouped[dateKey].allDay.push(event);
-      } else {
-        grouped[dateKey].timed.push(event);
-      }
     });
 
-    // Determine unavailable dates
-    // const unavailableDates = [];
+    const unavailableDates = [];
 
-    // for (const [dateStr, eventsByType] of Object.entries(grouped)) {
-    //   const timedCount = eventsByType.timed.length;
-    //   const allDayHouseSit = eventsByType.allDay.some(e => e.summary?.toLowerCase().includes("house-sit"));
-    //   const hasDropIn = eventsByType.timed.some(e => e.summary?.toLowerCase().includes("drop-in"));
+    for (const dateKey in grouped.timed) {
+      const timedCount = grouped.timed[dateKey] || 0;
+      const hasAllDay = grouped.allDay[dateKey] === true;
 
-    //   if (
-    //     timedCount >= 4 ||
-    //     (allDayHouseSit && hasDropIn)
-    //   ) {
-    //     unavailableDates.push(new Date(dateStr));
-    //   }
-    // }
-
-    res.json(grouped);
+      if (timedCount >= 4 && hasAllDay) {
+        unavailableDates.push(dateKey);
+      }
+    }
+   
+    res.json({unavailableDates});
   } catch (error) {
     console.error("Error fetching busy dates:", error);
     res.status(500).send("Failed to fetch busy dates");
