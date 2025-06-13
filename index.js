@@ -21,15 +21,34 @@ app.get("/busy-dates", async (req, res) => {
     const authClient = await auth.getClient();
     const calendar = google.calendar({ version: "v3", auth: authClient });
 
-    const result = await calendar.freebusy.query({
-      requestBody: {
-        timeMin: new Date().toISOString(),
-        timeMax: new Date(new Date().setMonth(new Date().getMonth() + 3)).toISOString(),
-        items: [{ id: process.env.CALENDAR_ID }],
-      },
+    const now = new Date();
+    const threeMonthsFromNow = new Date();
+    threeMonthsFromNow.setMonth(now.getMonth() + 3);
+
+    const events = await calendar.events.list({
+      calendarId: process.env.CALENDAR_ID,
+      timeMin: now.toISOString(),
+      timeMax: threeMonthsFromNow.toISOString(),
+      singleEvents: true,
+      orderBy: 'startTime',
     });
 
-    const busyDates = result.data.calendars[process.env.CALENDAR_ID].busy;
+    const busyDates = events.data.items.map(event => {
+      // Handle all-day vs specific time events
+      const start = event.start.date || event.start.dateTime;
+      const end = event.end.date || event.end.dateTime;
+      return { start, end };
+    });
+
+    // const result = await calendar.freebusy.query({
+    //   requestBody: {
+    //     timeMin: new Date().toISOString(),
+    //     timeMax: new Date(new Date().setMonth(new Date().getMonth() + 3)).toISOString(),
+    //     items: [{ id: process.env.CALENDAR_ID }],
+    //   },
+    // });
+
+    // const busyDates = result.data.calendars[process.env.CALENDAR_ID].busy;
     res.json(busyDates);
   } catch (error) {
     console.error("Error fetching busy dates:", error);
