@@ -31,10 +31,11 @@ app.get("/busy-dates", async (req, res) => {
       timeMin: now.toISOString(),
       timeMax: threeMonthsFromNow.toISOString(),
       singleEvents: true,
-      orderBy: "startTime",
+      orderBy: 'startTime'
     });
 
     const events = response.data.items;
+    console.log(events)
 
     // Group events by date
     const grouped = {};
@@ -67,22 +68,22 @@ app.get("/busy-dates", async (req, res) => {
     });
 
     // Determine unavailable dates
-    const unavailableDates = [];
+    // const unavailableDates = [];
 
-    for (const [dateStr, eventsByType] of Object.entries(grouped)) {
-      const timedCount = eventsByType.timed.length;
-      const allDayHouseSit = eventsByType.allDay.some(e => e.summary?.toLowerCase().includes("house-sit"));
-      const hasDropIn = eventsByType.timed.some(e => e.summary?.toLowerCase().includes("drop-in"));
+    // for (const [dateStr, eventsByType] of Object.entries(grouped)) {
+    //   const timedCount = eventsByType.timed.length;
+    //   const allDayHouseSit = eventsByType.allDay.some(e => e.summary?.toLowerCase().includes("house-sit"));
+    //   const hasDropIn = eventsByType.timed.some(e => e.summary?.toLowerCase().includes("drop-in"));
 
-      if (
-        timedCount >= 4 ||
-        (allDayHouseSit && hasDropIn)
-      ) {
-        unavailableDates.push(new Date(dateStr));
-      }
-    }
+    //   if (
+    //     timedCount >= 4 ||
+    //     (allDayHouseSit && hasDropIn)
+    //   ) {
+    //     unavailableDates.push(new Date(dateStr));
+    //   }
+    // }
 
-    res.json(unavailableDates);
+    res.json(grouped);
   } catch (error) {
     console.error("Error fetching busy dates:", error);
     res.status(500).send("Failed to fetch busy dates");
