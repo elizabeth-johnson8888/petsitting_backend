@@ -27,7 +27,7 @@ app.get("/busy-dates", async (req, res) => {
     threeMonthsFromNow.setMonth(threeMonthsFromNow.getMonth() + 3);
 
     const response = await calendar.events.list({
-      calendarId,
+      calendarId: calendarId,
       timeMin: now.toISOString(),
       timeMax: threeMonthsFromNow.toISOString(),
       singleEvents: true,
@@ -36,7 +36,7 @@ app.get("/busy-dates", async (req, res) => {
 
     const events = response.data.items;
    
-    res.json({events});
+    res.json({ events });
   } catch (error) {
     console.error("Error fetching busy dates:", error);
     res.status(500).send("Failed to fetch busy dates");
