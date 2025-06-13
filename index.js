@@ -21,34 +21,67 @@ app.get("/busy-dates", async (req, res) => {
     const authClient = await auth.getClient();
     const calendar = google.calendar({ version: "v3", auth: authClient });
 
+    const calendarId = process.env.CALENDAR_ID;
     const now = new Date();
     const threeMonthsFromNow = new Date();
-    threeMonthsFromNow.setMonth(now.getMonth() + 3);
+    threeMonthsFromNow.setMonth(threeMonthsFromNow.getMonth() + 3);
 
-    const events = await calendar.events.list({
-      calendarId: process.env.CALENDAR_ID,
+    const response = await calendar.events.list({
+      calendarId,
       timeMin: now.toISOString(),
       timeMax: threeMonthsFromNow.toISOString(),
       singleEvents: true,
-      orderBy: 'startTime',
+      orderBy: "startTime",
     });
 
-    const busyDates = events.data.items.map(event => {
-      // Handle all-day vs specific time events
-      const start = event.start.date || event.start.dateTime;
-      const end = event.end.date || event.end.dateTime;
-      return { start, end };
+    const events = response.data.items;
+
+    // Group events by date
+    const grouped = {};
+
+    events.forEach(event => {
+      let dateKey;
+      let isAllDay = false;
+
+      if (event.start.dateTime) {
+        dateKey = new Date(event.start.dateTime).toDateString();
+      } else if (event.start.date) {
+        dateKey = new Date(event.start.date).toDateString();
+        isAllDay = true;
+      } else {
+        return; // skip invalid event
+      }
+
+      if (!grouped[dateKey]) {
+        grouped[dateKey] = {
+          timed: [],
+          allDay: [],
+        };
+      }
+
+      if (isAllDay) {
+        grouped[dateKey].allDay.push(event);
+      } else {
+        grouped[dateKey].timed.push(event);
+      }
     });
 
-    // const result = await calendar.freebusy.query({
-    //   requestBody: {
-    //     timeMin: new Date().toISOString(),
-    //     timeMax: new Date(new Date().setMonth(new Date().getMonth() + 3)).toISOString(),
-    //     items: [{ id: process.env.CALENDAR_ID }],
-    //   },
-    // });
+    // Determine unavailable dates
+    const unavailableDates = [];
 
-    // const busyDates = result.data.calendars[process.env.CALENDAR_ID].busy;
+    for (const [dateStr, eventsByType] of Object.entries(grouped)) {
+      const timedCount = eventsByType.timed.length;
+      const allDayHouseSit = eventsByType.allDay.some(e => e.summary?.toLowerCase().includes("house-sit"));
+      const hasDropIn = eventsByType.timed.some(e => e.summary?.toLowerCase().includes("drop-in"));
+
+      if (
+        timedCount >= 4 ||
+        (allDayHouseSit && hasDropIn)
+      ) {
+        unavailableDates.push(new Date(dateStr));
+      }
+    }
+
     res.json(busyDates);
   } catch (error) {
     console.error("Error fetching busy dates:", error);
